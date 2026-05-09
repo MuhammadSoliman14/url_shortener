@@ -10,6 +10,7 @@ router.add('GET', '/shorten/:code', handlers.getUrl);
 router.add('PUT', '/shorten/:code', handlers.updateUrl);
 router.add('DELETE', '/shorten/:code', handlers.deleteUrl);
 router.add('GET', '/shorten/:code/stats', handlers.getStats);
+router.add('GET', '/:code', handlers.redirectUrl);
 
 const server = net.createServer((socket) => {
     socket.on('data', async (data) => {
@@ -40,7 +41,22 @@ const server = net.createServer((socket) => {
             }
             const result = await match.handler(match.params, body);
 
-            const responseBody = result.body ? JSON.stringify(result.body) : '';
+            let responseBody = '';
+            if (result.body !== null && result.body !== undefined) {
+                responseBody = JSON.stringify(result.body);
+            }
+            
+            if (result.redirect) {
+                socket.write(
+                    `HTTP/1.1 301 Moved Permanently\r\n` +
+                    `Location: ${result.redirect}\r\n` +
+                    `Content-Length: 0\r\n` +
+                    `\r\n`
+                );
+                socket.end();
+                return;
+            }
+        
             socket.write(
                 `HTTP/1.1 ${result.status}\r\n` +
                 `Content-Type: application/json\r\n` +

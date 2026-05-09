@@ -76,7 +76,27 @@ async getStats(params, body) {
     }
 
     return { status: 200, body: result.rows[0] };
-}
+},
+
+
+async redirectUrl(params, body){
+    const result = await pool.query(
+        'SELECT * from urls WHERE short_code = $1',
+        [params.code]
+    );
+
+    if (result.rows.length === 0){
+        return {status: 404, body: {error: 'URL not found'}};
+    }
+    
+    await pool.query(
+        'UPDATE urls SET access_count = access_count + 1 WHERE short_code = $1',
+        [params.code]
+    );
+
+    return { status: 301, redirect: result.rows[0].url };
+},
+
 };
 
 module.exports = handlers;
